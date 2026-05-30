@@ -7,7 +7,7 @@ import { Star, List, Map as MapIcon, Navigation } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import StandCard from "../components/StandCard";
 import InstallPrompt from "../components/InstallPrompt";
-import "leaflet/dist/leaflet.css";
+
 import L from "leaflet";
 
 delete L.Icon.Default.prototype._getIconUrl;
