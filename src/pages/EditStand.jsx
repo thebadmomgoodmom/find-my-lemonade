@@ -10,7 +10,6 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Trash2, MapPin, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
-import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 
 delete L.Icon.Default.prototype._getIconUrl;
