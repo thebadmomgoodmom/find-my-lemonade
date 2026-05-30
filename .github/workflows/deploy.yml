@@ -17,9 +17,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: 'npm'
-      - run: npm install
+          node-version: 18
+      - run: npm install --legacy-peer-deps
       - run: npm run build
         env:
           VITE_PUBLIC_APP_ID: 69f793dcee36575da5899bdf
