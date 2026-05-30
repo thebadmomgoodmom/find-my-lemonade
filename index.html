@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<meta name="theme-color" content="#FCD34D"/>
+<title>Find My Lemonade 🍋</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Nunito',sans-serif;background:#FFFBEB;max-width:430px;margin:0 auto;min-height:100vh;overflow-x:hidden;}
+.page{display:none;flex-direction:column;min-height:100vh;}
+.page.active{display:flex;}
+.leaflet-container{width:100%;height:100%;z-index:1;}
+.hide-scrollbar::-webkit-scrollbar{display:none;}
+.hide-scrollbar{-ms-overflow-style:none;scrollbar-width:none;}
+.bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:white;border-top:2px solid #FDE68A;z-index:1000;padding:8px 0 14px;}
+.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;background:none;border:none;cursor:pointer;padding:4px;font-family:'Nunito',sans-serif;font-size:10px;color:#9CA3AF;transition:color 0.2s;}
+.nav-btn.active{color:#F97316;}
+.nav-btn svg{width:22px;height:22px;}
+.add-circle{width:46px;height:46px;background:linear-gradient(135deg,#F97316,#EF4444);border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(249,115,22,0.4);margin-top:-18px;cursor:pointer;}
+.card{background:white;border-radius:16px;box-shadow:0 2px 12px rgba(0,0,0,0.08);padding:16px;margin:8px 12px;}
+.btn-primary{background:linear-gradient(135deg,#F97316,#EF4444);color:white;border:none;border-radius:12px;padding:13px 24px;font-family:'Nunito',sans-serif;font-size:15px;font-weight:700;cursor:pointer;width:100%;transition:opacity 0.2s;}
+.btn-primary:hover{opacity:0.9;}
+.btn-secondary{background:#FEF3C7;color:#92400E;border:2px solid #FCD34D;border-radius:12px;padding:11px 20px;font-family:'Nunito',sans-serif;font-size:14px;font-weight:700;cursor:pointer;}
+.input-field{width:100%;border:2px solid #FDE68A;border-radius:12px;padding:12px;font-family:'Nunito',sans-serif;font-size:14px;outline:none;background:white;transition:border-color 0.2s;}
+.input-field:focus{border-color:#F97316;}
+.label{font-size:13px;font-weight:700;color:#78350F;margin-bottom:6px;display:block;}
+.chip{display:inline-flex;align-items:center;border-radius:20px;padding:6px 14px;font-size:13px;font-weight:700;cursor:pointer;border:2px solid #FDE68A;background:white;color:#78350F;transition:all 0.2s;margin:3px;}
+.chip.selected{background:#FCD34D;border-color:#F97316;color:#92400E;}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:2000;display:none;align-items:flex-end;justify-content:center;}
+.overlay.active{display:flex;}
+.sheet{background:white;border-radius:20px 20px 0 0;width:100%;max-width:430px;padding:20px;animation:slideUp 0.3s ease;}
+.half-sheet{max-height:55vh;overflow-y:auto;}
+.full-sheet{max-height:92vh;overflow-y:auto;}
+.modal-bg{background:rgba(0,0,0,0.5);position:fixed;inset:0;z-index:3000;display:none;align-items:center;justify-content:center;}
+.modal-bg.active{display:flex;}
+.modal-box{background:white;border-radius:20px;padding:24px;width:90%;max-width:380px;max-height:80vh;overflow-y:auto;}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#FCD34D,#F97316);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;color:white;flex-shrink:0;}
+.tab-btn{flex:1;padding:10px;background:none;border:none;font-family:'Nunito',sans-serif;font-size:14px;font-weight:700;color:#9CA3AF;cursor:pointer;border-bottom:3px solid transparent;transition:all 0.2s;}
+.tab-btn.active{color:#F97316;border-bottom-color:#F97316;}
+.notif-dot{position:absolute;top:-4px;right:-4px;width:18px;height:18px;background:#EF4444;border-radius:50%;font-size:10px;font-weight:800;color:white;display:flex;align-items:center;justify-content:center;}
+.lemon-btn{background:none;border:2px solid #FDE68A;border-radius:20px;padding:5px 12px;font-size:13px;font-weight:700;cursor:pointer;color:#78350F;display:inline-flex;align-items:center;gap:4px;font-family:'Nunito',sans-serif;}
+.lemon-btn.given{background:#FEF3C7;border-color:#F97316;}
+.section-header{font-size:15px;font-weight:900;color:#78350F;padding:12px 16px 6px;}
+</style>
+</head>
+<body>
+
+<!-- AUTH PAGE -->
+<div id="page-auth" class="page active" style="background:linear-gradient(160deg,#FCD34D 0%,#FFFBEB 55%);">
+  <div style="padding:60px 24px 20px;text-align:center;">
+    <div style="font-size:72px;margin-bottom:8px;">🍋</div>
+    <h1 style="font-size:30px;font-weight:900;color:#78350F;">Find My Lemonade</h1>
+    <p style="color:#92400E;font-size:14px;margin-top:6px;">Discover neighborhood stands near you</p>
+  </div>
+  <div style="background:white;margin:0 24px;border-radius:16px;padding:4px;box-shadow:0 2px 10px rgba(0,0,0,0.08);display:flex;">
+    <button class="tab-btn active" id="auth-signin-tab" onclick="switchAuthTab('signin')">Sign In</button>
+    <button class="tab-btn" id="auth-register-tab" onclick="switchAuthTab('register')">Register</button>
+  </div>
+  <div id="auth-signin-form" style="padding:20px 24px;">
+    <div style="margin-bottom:14px;"><label class="label">Email</label><input class="input-field" id="signin-email" type="email" placeholder="your@email.com"/></div>
+    <div style="margin-bottom:14px;"><label class="label">Password</label><input class="input-field" id="signin-password" type="password" placeholder="••••••••"/></div>
+    <div id="signin-error" style="color:#EF4444;font-size:13px;margin-bottom:10px;display:none;"></div>
+    <button class="btn-primary" onclick="signIn()">Sign In 🍋</button>
+    <button onclick="showPage('page-forgot')" style="background:none;border:none;color:#F97316;font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;cursor:pointer;margin-top:12px;width:100%;text-align:center;">Forgot Password?</button>
+  </div>
+  <div id="auth-register-form" style="padding:20px 24px;display:none;">
+    <div style="margin-bottom:14px;"><label class="label">Display Name</label><input class="input-field" id="reg-name" type="text" placeholder="Your nickname (visible to others)"/></div>
+    <div style="margin-bottom:14px;"><label class="label">Email</label><input class="input-field" id="reg-email" type="email" placeholder="your@email.com"/></div>
+    <div style="margin-bottom:14px;"><label class="label">Password</label><input class="input-field" id="reg-password" type="password" placeholder="At least 6 characters"/></div>
+    <div id="reg-error" style="color:#EF4444;font-size:13px;margin-bottom:10px;display:none;"></div>
+    <button class="btn-primary" onclick="register()">Create Account 🍋</button>
+  </div>
+</div>
+
+<!-- HOME PAGE -->
+<div id="page-home" class="page" style="padding-bottom:80px;">
+  <div style="background:white;padding:16px;display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #FDE68A;position:sticky;top:0;z-index:100;">
+    <div><h1 style="font-size:20px;font-weight:900;color:#78350F;">🍋 Find My Lemonade</h1><p id="home-greeting" style="font-size:12px;color:#9CA3AF;"></p></div>
+    <button onclick="openNotifications()" style="background:none;border:none;cursor:pointer;position:relative;padding:4px;">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#78350F" stroke-width="2.5"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      <span id="notif-badge" class="notif-dot" style="display:none;">0</span>
+    </button>
+  </div>
+  <div id="saved-section" style="display:none;padding:10px 0 4px;">
+    <div class="section-header">⭐ Saved for You</div>
+    <div id="saved-scroll" class="hide-scrollbar" style="display:flex;gap:10px;overflow-x:auto;padding:0 16px 6px;"></div>
+  </div>
+  <div id="feed-container" style="padding:4px 0;"></div>
+</div>
+
+<!-- MAP PAGE -->
+<div id="page-map" class="page" style="padding-bottom:80px;">
+  <div style="background:white;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #FDE68A;position:sticky;top:0;z-index:100;">
+    <div><h1 style="font-size:18px;font-weight:900;color:#78350F;">🗺️ Nearby Stands</h1><p id="nearby-count" style="font-size:12px;color:#9CA3AF;">Finding stands...</p></div>
+    <button onclick="toggleMapView()" id="map-toggle-btn" style="background:#FEF3C7;border:2px solid #FCD34D;border-radius:10px;padding:6px 14px;font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;color:#78350F;cursor:pointer;">📋 List</button>
+  </div>
+  <div id="map-view"><div id="map-container" style="height:calc(100vh - 120px);"></div></div>
+  <div id="list-view" style="display:none;overflow-y:auto;padding:8px 0;"></div>
+</div>
+
+<!-- SEARCH PAGE -->
+<div id="page-search" class="page" style="padding-bottom:80px;">
+  <div style="background:white;padding:14px 16px;border-bottom:2px solid #FDE68A;position:sticky;top:0;z-index:100;">
+    <h1 style="font-size:18px;font-weight:900;color:#78350F;margin-bottom:10px;">🔍 Search</h1>
+    <input class="input-field" id="search-input" type="text" placeholder="Search stands or people..." oninput="doSearch()" style="margin-bottom:10px;"/>
+    <div style="display:flex;border-bottom:2px solid #FDE68A;">
+      <button class="tab-btn active" id="search-tab-all" onclick="switchSearchTab('all')">All</button>
+      <button class="tab-btn" id="search-tab-users" onclick="switchSearchTab('users')">Users</button>
+      <button class="tab-btn" id="search-tab-stands" onclick="switchSearchTab('stands')">Stands</button>
+    </div>
+    <div id="stand-filters" style="display:flex;gap:6px;overflow-x:auto;padding-top:10px;" class="hide-scrollbar">
+      <button class="chip selected" onclick="setFilter('all')" id="filter-all">All</button>
+      <button class="chip" onclick="setFilter('closest')" id="filter-closest">📍 Closest</button>
+      <button class="chip" onclick="setFilter('rated')" id="filter-rated">⭐ Top Rated</button>
+      <button class="chip" onclick="setFilter('cheapest')" id="filter-cheapest">💰 Cheapest</button>
+    </div>
+  </div>
+  <div id="search-results" style="padding:8px 0;"></div>
+</div>
+
+<!-- ADD / EDIT STAND PAGE -->
+<div id="page-add-stand" class="page" style="padding-bottom:80px;overflow-y:auto;">
+  <div style="background:white;padding:14px 16px;border-bottom:2px solid #FDE68A;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:100;">
+    <button onclick="goBack()" style="background:none;border:none;cursor:pointer;font-size:22px;line-height:1;">←</button>
+    <h1 style="font-size:18px;font-weight:900;color:#78350F;" id="add-stand-title">🍋 New Stand</h1>
+  </div>
+  <div style="padding:16px;">
+    <input type="hidden" id="editing-stand-id"/>
+    <div style="margin-bottom:14px;"><label class="label">Stand Name *</label><input class="input-field" id="stand-name" type="text" placeholder="e.g. Jake's Lemonade Stand"/></div>
+    <div style="margin-bottom:14px;">
+      <label class="label">Categories (pick all that apply) *</label>
+      <div id="category-chips">
+        <span class="chip" onclick="toggleChip(this,'Lemonade')">🍋 Lemonade</span>
+        <span class="chip" onclick="toggleChip(this,'Drinks')">🥤 Drinks</span>
+        <span class="chip" onclick="toggleChip(this,'Snacks')">🍿 Snacks</span>
+        <span class="chip" onclick="toggleChip(this,'Baked Goods')">🍪 Baked Goods</span>
+        <span class="chip" onclick="toggleChip(this,'Other')">✨ Other</span>
+      </div>
+    </div>
+    <div style="margin-bottom:14px;"><label class="label">Description</label><textarea class="input-field" id="stand-desc" rows="3" placeholder="Tell people about your stand..."></textarea></div>
+    <div style="margin-bottom:14px;"><label class="label">Hours</label><input class="input-field" id="stand-hours" type="text" placeholder="e.g. Mon–Fri 2pm–6pm"/></div>
+    <div style="margin-bottom:14px;">
+      <label class="label">Items for Sale</label>
+      <div id="items-list"></div>
+      <button onclick="addItem()" style="background:#FEF3C7;border:2px dashed #FCD34D;border-radius:10px;padding:10px;width:100%;font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;color:#78350F;cursor:pointer;margin-top:6px;">+ Add Item</button>
+    </div>
+    <div style="margin-bottom:14px;">
+      <label class="label">📍 Pin your location — drag the marker</label>
+      <div id="add-map" style="height:220px;border-radius:12px;overflow:hidden;border:2px solid #FDE68A;"></div>
+      <p style="font-size:11px;color:#9CA3AF;margin-top:4px;">📌 Exact address hidden for privacy</p>
+    </div>
+    <div style="margin-bottom:16px;">
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
+        <input type="checkbox" id="parent-permission" style="width:18px;height:18px;accent-color:#F97316;"/>
+        <span style="font-size:13px;font-weight:700;color:#78350F;">✅ I have parent/guardian permission</span>
+      </label>
+    </div>
+    <div id="add-stand-error" style="color:#EF4444;font-size:13px;margin-bottom:10px;display:none;"></div>
+    <button class="btn-primary" onclick="submitStand()" id="submit-stand-btn">Post Stand 🍋</button>
+  </div>
+</div>
+
+<!-- STAND DETAIL PAGE -->
+<div id="page-stand-detail" class="page" style="padding-bottom:80px;overflow-y:auto;">
+  <div style="background:white;padding:14px 16px;border-bottom:2px solid #FDE68A;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:100;">
+    <button onclick="goBack()" style="background:none;border:none;cursor:pointer;font-size:22px;line-height:1;">←</button>
+    <h1 style="font-size:18px;font-weight:900;color:#78350F;flex:1;" id="detail-title">Stand</h1>
+    <span id="detail-status-badge" style="font-size:12px;font-weight:700;padding:4px 10px;border-radius:20px;"></span>
+  </div>
+  <div id="stand-detail-content" style="padding:16px;"></div>
+</div>
+
+<!-- PROFILE PAGE -->
+<div id="page-profile" class="page" style="padding-bottom:80px;overflow-y:auto;">
+  <div style="background:white;padding:14px 16px;border-bottom:2px solid #FDE68A;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;">
+    <h1 style="font-size:18px;font-weight:900;color:#78350F;">👤 My Profile</h1>
+    <button onclick="signOut()" style="background:none;border:none;color:#EF4444;font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">Sign Out</button>
+  </div>
+  <div id="profile-content" style="padding:16px;"></div>
+</div>
+
+<!-- USER PROFILE PAGE -->
+<div id="page-user-profile" class="page" style="padding-bottom:80px;overflow-y:auto;">
+  <div style="background:white;padding:14px 16px;border-bottom:2px solid #FDE68A;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:100;">
+    <button onclick="goBack()" style="background:none;border:none;cursor:pointer;font-size:22px;line-height:1;">←</button>
+    <h1 style="font-size:18px;font-weight:900;color:#78350F;flex:1;" id="user-profile-name">Profile</h1>
+  </div>
+  <div id="user-profile-content" style="padding:16px;"></div>
+</div>
+
+<!-- LEADERBOARD PAGE -->
+<div id="page-leaderboard" class="page" style="padding-bottom:80px;overflow-y:auto;">
+  <div style="background:white;padding:14px 16px;border-bottom:2px solid #FDE68A;position:sticky;top:0;z-index:100;">
+    <h1 style="font-size:18px;font-weight:900;color:#78350F;margin-bottom:10px;">🏆 Ranks & Quests</h1>
+    <div style="display:flex;background:#FEF3C7;border-radius:12px;padding:4px;gap:4px;">
+      <button id="lb-btn-leaderboard" onclick="switchLBTab('leaderboard')" style="flex:1;padding:9px;border:none;background:white;border-radius:9px;font-family:'Nunito',sans-serif;font-weight:800;font-size:14px;color:#78350F;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,0.1);">🏆 Leaderboard</button>
+      <button id="lb-btn-quests" onclick="switchLBTab('quests')" style="flex:1;padding:9px;border:none;background:transparent;border-radius:9px;font-family:'Nunito',sans-serif;font-weight:800;font-size:14px;color:#9CA3AF;cursor:pointer;">⚡ Quests</button>
+    </div>
+  </div>
+  <div id="leaderboard-content" style="padding:12px;"></div>
+</div>
+
+<!-- FORGOT PASSWORD PAGE -->
+<div id="page-forgot" class="page" style="background:linear-gradient(160deg,#FCD34D 0%,#FFFBEB 55%);">
+  <div style="padding:40px 24px;">
+    <button onclick="showPage('page-auth')" style="background:none;border:none;cursor:pointer;font-size:22px;margin-bottom:24px;display:block;">← Back</button>
+    <div style="text-align:center;margin-bottom:20px;"><div style="font-size:56px;">🔑</div><h2 style="font-size:22px;font-weight:900;color:#78350F;margin-top:8px;">Reset Password</h2><p style="color:#92400E;font-size:14px;margin-top:6px;">We'll look up your account</p></div>
+    <label class="label">Email</label>
+    <input class="input-field" id="forgot-email" type="email" placeholder="your@email.com" style="margin-bottom:14px;"/>
+    <div id="forgot-result" style="font-size:13px;margin-bottom:14px;padding:10px;border-radius:10px;display:none;"></div>
+    <button class="btn-primary" onclick="forgotPassword()">Find Account</button>
+  </div>
+</div>
+
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav" id="bottom-nav" style="display:none;">
+  <div style="display:flex;align-items:center;">
+    <button class="nav-btn" id="nav-home" onclick="navTo('home')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      Home
+    </button>
+    <button class="nav-btn" id="nav-map" onclick="navTo('map')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" x2="9" y1="3" y2="18"/><line x1="15" x2="15" y1="6" y2="21"/></svg>
+      Map
+    </button>
+    <div style="flex:1;display:flex;justify-content:center;">
+      <div class="add-circle" onclick="navTo('add-stand')">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      </div>
+    </div>
+    <button class="nav-btn" id="nav-search" onclick="navTo('search')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      Search
+    </button>
+    <button class="nav-btn" id="nav-profile" onclick="navTo('profile')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      Profile
+    </button>
+  </div>
+</nav>
+
+<!-- NOTIFICATIONS OVERLAY -->
+<div class="overlay" id="notif-overlay" onclick="closeNotif(event)">
+  <div class="sheet half-sheet" onclick="event.stopPropagation()">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+      <h3 style="font-size:17px;font-weight:900;color:#78350F;">🔔 Notifications</h3>
+      <button onclick="closeNotif()" style="background:none;border:none;font-size:24px;cursor:pointer;color:#9CA3AF;line-height:1;">×</button>
+    </div>
+    <div id="notif-list"></div>
+  </div>
+</div>
+
+<!-- VISIT CREATION OVERLAY -->
+<div class="overlay" id="visit-overlay" onclick="closeVisitOverlay(event)">
+  <div class="sheet full-sheet" onclick="event.stopPropagation()">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <h3 style="font-size:17px;font-weight:900;color:#78350F;">🍋 Post Your Visit</h3>
+      <button onclick="closeVisitOverlay()" style="background:none;border:none;font-size:24px;cursor:pointer;color:#9CA3AF;line-height:1;">×</button>
+    </div>
+    <div style="margin-bottom:14px;"><label class="label">Title</label><input class="input-field" id="visit-title" type="text"/></div>
+    <div style="margin-bottom:14px;"><label class="label">Note (optional)</label><textarea class="input-field" id="visit-note" rows="3" placeholder="How was it? 🍋"></textarea></div>
+    <div style="margin-bottom:14px;">
+      <label class="label">Photos (up to 3)</label>
+      <label style="display:flex;align-items:center;gap:8px;background:#FEF3C7;border:2px dashed #FCD34D;border-radius:10px;padding:12px;cursor:pointer;">
+        <span style="font-size:22px;">📷</span><span style="font-size:13px;font-weight:700;color:#78350F;">Add Photos</span>
+        <input type="file" accept="image/*" multiple id="visit-photos-input" style="display:none;" onchange="previewVisitPhotos(event)"/>
+      </label>
+      <div id="visit-photo-previews" style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;"></div>
+    </div>
+    <input type="hidden" id="visit-stand-id"/>
+    <div style="display:flex;gap:10px;margin-top:8px;">
+      <button onclick="closeVisitOverlay()" class="btn-secondary" style="flex:1;">Cancel</button>
+      <button onclick="postVisit()" class="btn-primary" style="flex:2;">Post Activity 🍋</button>
+    </div>
+  </div>
+</div>
+
+<!-- LEMON MODAL -->
+<div class="modal-bg" id="lemon-modal" onclick="closeLemonModal(event)">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+      <h3 style="font-size:16px;font-weight:900;color:#78350F;">🍋 Gave a Lemon</h3>
+      <button onclick="closeLemonModal()" style="background:none;border:none;font-size:24px;cursor:pointer;line-height:1;">×</button>
+    </div>
+    <div id="lemon-list"></div>
+  </div>
+</div>
+
+<!-- COMMENT MODAL -->
+<div class="modal-bg" id="comment-modal" onclick="closeCommentModal(event)">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+      <h3 style="font-size:16px;font-weight:900;color:#78350F;">💬 Comments</h3>
+      <button onclick="closeCommentModal()" style="background:none;border:none;font-size:24px;cursor:pointer;line-height:1;">×</button>
+    </div>
+    <div id="comment-list" style="margin-bottom:12px;max-height:280px;overflow-y:auto;"></div>
+    <div style="display:flex;gap:8px;">
+      <input class="input-field" id="comment-input" type="text" placeholder="Add a comment..." style="flex:1;" onkeydown="if(event.key==='Enter')postComment()"/>
+      <button onclick="postComment()" style="background:#F97316;color:white;border:none;border-radius:10px;padding:10px 14px;font-family:'Nunito',sans-serif;font-weight:700;cursor:pointer;">Post</button>
+    </div>
+    <input type="hidden" id="comment-activity-id"/>
+  </div>
+</div>
+
+<!-- REVIEW MODAL -->
+<div class="modal-bg" id="review-modal" onclick="closeReviewModal(event)">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <h3 style="font-size:16px;font-weight:900;color:#78350F;margin-bottom:14px;">⭐ Leave a Review</h3>
+    <div style="text-align:center;margin-bottom:16px;font-size:40px;" id="review-stars-display">☆☆☆☆☆</div>
+    <input type="hidden" id="review-rating-val" value="0"/>
+    <textarea class="input-field" id="review-text" rows="3" placeholder="Share your experience..." style="margin-bottom:14px;"></textarea>
+    <input type="hidden" id="review-stand-id"/>
+    <button class="btn-primary" onclick="submitReview()">Post Review ⭐</button>
+  </div>
+</div>
+
+<!-- FOLLOWERS MODAL -->
+<div class="modal-bg" id="followers-modal" onclick="event.target===this&&closeFollowersModal()">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+      <h3 style="font-size:16px;font-weight:900;color:#78350F;" id="followers-modal-title">Followers</h3>
+      <button onclick="closeFollowersModal()" style="background:none;border:none;font-size:24px;cursor:pointer;line-height:1;">×</button>
+    </div>
+    <div id="followers-list"></div>
+  </div>
+</div>
+
+<!-- STAND MAP POPUP MODAL -->
+<div class="modal-bg" id="stand-popup-modal" onclick="event.target===this&&closeStandPopup()">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div id="stand-popup-content"></div>
+    <button onclick="closeStandPopup()" style="background:none;border:none;color:#9CA3AF;font-family:'Nunito',sans-serif;font-size:13px;cursor:pointer;margin-top:12px;width:100%;text-align:center;">Close</button>
+  </div>
+</div>
+
+<!-- INSTALL BANNER -->
+<div id="install-banner" style="display:none;position:fixed;bottom:82px;left:50%;transform:translateX(-50%);width:92%;max-width:390px;background:linear-gradient(135deg,#78350F,#92400E);color:white;border-radius:14px;padding:12px 16px;z-index:999;box-shadow:0 4px 20px rgba(0,0,0,0.25);">
+  <div style="display:flex;align-items:center;justify-content:space-between;">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span style="font-size:30px;">🍋</span>
+      <div><div style="font-weight:800;font-size:14px;">Add to Home Screen</div><div style="font-size:11px;opacity:0.8;">Tap Share → "Add to Home Screen"</div></div>
+    </div>
+    <button onclick="document.getElementById('install-banner').style.display='none'" style="background:none;border:none;color:white;font-size:22px;cursor:pointer;line-height:1;">×</button>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// DATA LAYER — localStorage helpers
+// ============================================================
+const DB = {
+  get(key, def=[]) { try { return JSON.parse(localStorage.getItem('fml_'+key)) ?? def; } catch(e){ return def; } },
+  set(key, val) { localStorage.setItem('fml_'+key, JSON.stringify(val)); },
+  id() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+};
+
+// ============================================================
+// AUTH
+// ============================================================
+let currentUser = null;
+const ADMIN_EMAIL = 'liammlinton@gmail.com';
+
+function getUsers() { return DB.get('users', []); }
+function saveUsers(u) { DB.set('users', u); }
+function getUserById(id) { return getUsers().find(u=>u.id===id)||null; }
+function getUserByEmail(e) { return getUsers().find(u=>u.email===e)||null; }
+function getCurrentUser() {
+  const id = localStorage.getItem('fml_session');
+  if (!id) return null;
+  return getUserById(id);
+}
+function refreshCurrentUser() { currentUser = getCurrentUser(); }
+
+function isAdmin() { return currentUser && currentUser.email === ADMIN_EMAIL; }
+
+function switchAuthTab(tab) {
+  document.getElementById('auth-signin-form').style.display = tab==='signin' ? 'block' : 'none';
+  document.getElementById('auth-register-form').style.display = tab==='register' ? 'block' : 'none';
+  document.getElementById('auth-signin-tab').classList.toggle('active', tab==='signin');
+  document.getElementById('auth-register-tab').classList.toggle('active', tab==='register');
+}
+
+function signIn() {
+  const email = document.getElementById('signin-email').value.trim().toLowerCase();
+  const pass = document.getElementById('signin-password').value;
+  const err = document.getElementById('signin-error');
+  const user = getUser
